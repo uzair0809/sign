@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Streaming</title>
+</head>
+<body>
+  <video id="videoElement" width="640" height="480" autoplay></video>
+  <button id="captureButton">Capture Photo</button>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+  const videoElement = document.getElementById('videoElement');
+  const captureButton = document.getElementById('captureButton');
+
+  let stream;
+
+  // Function to start camera streaming
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoElement.srcObject = stream;
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+    }
+  }
+
+  // Function to stop camera streaming
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  // Function to capture photo
+  async function capturePhoto() {
+    const canvas = document.createElement('canvas');
+    canvas.width = videoElement.videoWidth;
+    canvas.height = videoElement.videoHeight;
+
+    const context = canvas.getContext('2d');
+    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to base64 encoded image string
+    const base64Image = canvas.toDataURL('image/jpeg');
+
+    // Send base64 encoded image string to server
+    sendFrame(base64Image);
+  }
+
+  // Function to send frame to server
+  async function sendFrame(base64Image) {
+    try {
+      const response = await fetch('http://192.168.1.3:5001/video-frame', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ frame: base64Image })
+      });
+
+      const responseData = await response.json();
+      console.log('Frame sent successfully:', responseData);
+    } catch (error) {
+      console.error('Error sending frame:', error);
+    }
+  }
+
+  // Event listener for capture button click
+  captureButton.addEventListener('click', capturePhoto);
+
+  // Start camera streaming when DOM content is loaded
+  startCamera();
+
+  // Cleanup when the page is unloaded
+  window.addEventListener('beforeunload', stopCamera);
+});
+
+  </script>
+</body>
+</html>
